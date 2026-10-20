@@ -55,7 +55,9 @@ export function predictPasses(
   const stepMs = Math.min(stepSeconds, 30) * 1_000;
   const sample = (time: number): Sample | null => {
     const look = getSatelliteLookAngles(satellite, observer, new Date(time));
-    return look ? { time, elevation: look.elevation, azimuth: look.azimuth } : null;
+    return look
+      ? { time, elevation: look.elevation, azimuth: look.azimuth }
+      : null;
   };
   const crossing = (a: Sample, b: Sample): Sample | null => {
     let left = a;
@@ -64,7 +66,7 @@ export function predictPasses(
     while (right.time - left.time > 100) {
       const middle = sample((left.time + right.time) / 2);
       if (!middle) return null;
-      if ((middle.elevation >= minElevation) === (left.elevation >= minElevation)) {
+      if (middle.elevation >= minElevation === left.elevation >= minElevation) {
         left = middle;
       } else {
         right = middle;
@@ -97,13 +99,16 @@ export function predictPasses(
     const candidates = [sample(leftMs), sample(rightMs), a, b].filter(
       (value): value is Sample => value !== null,
     );
-    return candidates.reduce((best, item) => item.elevation > best.elevation ? item : best);
+    return candidates.reduce((best, item) =>
+      item.elevation > best.elevation ? item : best,
+    );
   };
 
   const passes: PassPrediction[] = [];
   let previous = sample(startMs);
   if (!previous) return [];
-  let activeStart: Sample | null = previous.elevation >= minElevation ? previous : null;
+  let activeStart: Sample | null =
+    previous.elevation >= minElevation ? previous : null;
   let ongoing = activeStart !== null;
   let peak = activeStart;
   let beforePrevious: Sample | null = null;
@@ -131,7 +136,11 @@ export function predictPasses(
     return true;
   };
 
-  for (let time = Math.min(startMs + stepMs, endMs); time <= endMs; time = Math.min(time + stepMs, endMs)) {
+  for (
+    let time = Math.min(startMs + stepMs, endMs);
+    time <= endMs;
+    time = Math.min(time + stepMs, endMs)
+  ) {
     const current = sample(time);
     // Never manufacture an end/peak across an interval we could not propagate.
     if (!current) return passes;
@@ -150,13 +159,18 @@ export function predictPasses(
       // A grazing pass can be shorter than one discovery step. Refine local
       // maxima even when all coarse samples are below the acquisition mask.
       // The two boundary intervals also cover a peak clipped by the window.
-      const localPeak = beforePrevious !== null &&
+      const localPeak =
+        beforePrevious !== null &&
         previous.elevation > beforePrevious.elevation &&
         previous.elevation >= current.elevation;
       if (localPeak || beforePrevious === null || time === endMs) {
         const left = localPeak && beforePrevious ? beforePrevious : previous;
         const hiddenPeak = maximum(left.time, current.time);
-        if (hiddenPeak && hiddenPeak.elevation >= minElevation && hiddenPeak.time > lastEndMs) {
+        if (
+          hiddenPeak &&
+          hiddenPeak.elevation >= minElevation &&
+          hiddenPeak.time > lastEndMs
+        ) {
           const start = crossing(left, hiddenPeak);
           const end = crossing(hiddenPeak, current);
           if (!start || !end) return passes;
@@ -170,7 +184,8 @@ export function predictPasses(
         }
       }
     }
-    if (activeStart && (!peak || current.elevation > peak.elevation)) peak = current;
+    if (activeStart && (!peak || current.elevation > peak.elevation))
+      peak = current;
     beforePrevious = previous;
     previous = current;
     if (time === endMs) break;

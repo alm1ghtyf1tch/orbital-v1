@@ -13,6 +13,8 @@ Source queries:
 
 The runtime requests only the chosen catalog, caches each successful query for two hours, deduplicates concurrent requests, and retains last-known-good elements on failure. An upstream HTTP error pauses further queries for two hours. Network and malformed-response failures also receive a two-hour retry interval per group. Next.js's revalidating data cache supplements the process-local cache. Independent processes/installations have independent caches.
 
+The response's original HTTP `Date` is retained as `fetchedAt` when supplied by CelesTrak, including when Next serves a saved response after a restart or during revalidation. `Age` supplies a fallback if present without `Date`; otherwise request completion time is used. A response dated more than one minute ago, or explicitly carrying a positive cache age, is labeled cached. Retrieval timestamps never replace the TLE's orbital epoch.
+
 Policy and format references:
 
 - [CelesTrak Usage Policy](https://celestrak.org/usage-policy.php): GP data updates every two hours; download only the data needed and once per update.

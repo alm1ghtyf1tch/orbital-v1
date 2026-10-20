@@ -14,15 +14,24 @@ export function useCatalog() {
     const controller = new AbortController();
     async function load() {
       try {
-      const response = await fetch(`/api/catalog?group=${group}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`Catalog request failed (${response.status}).`);
-      const next = await response.json() as CatalogResponse;
-      if (!Array.isArray(next.satellites) || !next.satellites.length) throw new Error("The catalog did not contain usable elements.");
-      if (!controller.signal.aborted) setCatalog(next);
-    } catch (cause) {
-      if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "The catalog is unavailable.");
-    } finally {
-      if (!controller.signal.aborted) setLoading(false);
+        const response = await fetch(`/api/catalog?group=${group}`, {
+          signal: controller.signal,
+        });
+        if (!response.ok)
+          throw new Error(`Catalog request failed (${response.status}).`);
+        const next = (await response.json()) as CatalogResponse;
+        if (!Array.isArray(next.satellites) || !next.satellites.length)
+          throw new Error("The catalog did not contain usable elements.");
+        if (!controller.signal.aborted) setCatalog(next);
+      } catch (cause) {
+        if (!controller.signal.aborted)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "The catalog is unavailable.",
+          );
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     }
     void load();

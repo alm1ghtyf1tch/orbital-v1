@@ -1,46 +1,68 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import {
+  advanceMissionClock,
+  commandMissionClock,
+  createMissionClock,
+  type ClockCommand,
+} from "@/lib/clock";
 
-interface ClockState {
-  timestamp: number;
-  wallTimestamp: number;
-  speed: number;
-  paused: boolean;
-  realTime: boolean;
+function readTime() {
+  return { wallTimestamp: Date.now(), monotonicTimestamp: performance.now() };
 }
 
 export function useMissionClock() {
-  const [clock, setClock] = useState<ClockState>({ timestamp: 0, wallTimestamp: 0, speed: 1, paused: false, realTime: true });
+  const [clock, setClock] = useState(createMissionClock);
 
   useEffect(() => {
-    let previous = performance.now();
-    const timer = window.setInterval(() => {
-      const next = performance.now();
-      const elapsed = next - previous;
-      previous = next;
-      setClock((current) => ({
-        ...current,
-        wallTimestamp: Date.now(),
-        timestamp: current.paused ? current.timestamp : current.realTime ? Date.now() : current.timestamp + elapsed * current.speed,
-      }));
-    }, 500);
-    return () => window.clearInterval(timer);
+    const tick = () => {
+      const reading = readTime();
+      setClock((current) => advanceMissionClock(current, reading));
+    };
+    // Hydration starts at zero; establish UTC immediately after mounting.
+    const initialization = window.setTimeout(tick, 0);
+    const timer = window.setInterval(tick, 500);
+    return () => {
+      window.clearTimeout(initialization);
+      window.clearInterval(timer);
+    };
   }, []);
 
-  const togglePause = useCallback(() => setClock((current) => ({
-    ...current, timestamp: current.timestamp || Date.now(), paused: !current.paused, realTime: false,
-  })), []);
-  const setSpeed = useCallback((speed: number) => setClock((current) => ({
-    ...current, timestamp: current.timestamp || Date.now(), speed, realTime: false,
-  })), []);
-  const reset = useCallback(() => setClock({ timestamp: Date.now(), wallTimestamp: Date.now(), speed: 1, paused: false, realTime: true }), []);
-  const setOffset = useCallback((minutes: number) => setClock((current) => ({
-    ...current, timestamp: Date.now() + minutes * 60_000, realTime: false,
-  })), []);
-  const jumpTo = useCallback((time: string) => setClock((current) => ({
-    ...current, timestamp: new Date(time).getTime(), realTime: false, paused: true,
-  })), []);
+  const command = useCallback((action: ClockCommand) => {
+    // Capture the event's boundary now, rather than when React runs its updater.
+    const reading = readTime();
+    setClock((current) => commandMissionClock(current, reading, action));
+  }, []);
+  const togglePause = useCallback(
+    () => command({ type: "togglePause" }),
+    [command],
+  );
+  const setSpeed = useCallback(
+    (speed: number) => command({ type: "setSpeed", speed }),
+    [command],
+  );
+  const reset = useCallback(() => command({ type: "reset" }), [command]);
+  const setOffset = useCallback(
+    (minutes: number) => command({ type: "setOffset", minutes }),
+    [command],
+  );
+  const jumpTo = useCallback(
+    (time: string) =>
+      command({ type: "jumpTo", timestamp: new Date(time).getTime() }),
+    [command],
+  );
 
-  return { ...clock, togglePause, setSpeed, reset, setOffset, jumpTo };
+  return {
+    timestamp: clock.timestamp,
+    wallTimestamp: clock.wallTimestamp,
+    speed: clock.speed,
+    paused: clock.paused,
+    realTime: clock.realTime,
+    togglePause,
+    setSpeed,
+    reset,
+    setOffset,
+    jumpTo,
+  };
 }

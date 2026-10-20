@@ -7,19 +7,34 @@ const TWO_HOURS_MS = 2 * 60 * 60 * 1_000;
 
 function checksum(line: string): string {
   const first68 = line.slice(0, 68);
-  const sum = [...first68].reduce((total, character) => total + (/\d/.test(character) ? Number(character) : character === "-" ? 1 : 0), 0);
+  const sum = [...first68].reduce(
+    (total, character) =>
+      total +
+      (/\d/.test(character) ? Number(character) : character === "-" ? 1 : 0),
+    0,
+  );
   return first68 + (sum % 10);
 }
 
-function replaceField(record: string, line: number, start: number, value: string): string {
+function replaceField(
+  record: string,
+  line: number,
+  start: number,
+  value: string,
+): string {
   const lines = record.split("\n");
-  lines[line] = checksum(lines[line].slice(0, start) + value + lines[line].slice(start + value.length));
+  lines[line] = checksum(
+    lines[line].slice(0, start) +
+      value +
+      lines[line].slice(start + value.length),
+  );
   return lines.join("\n");
 }
 
 async function isolatedCatalog() {
   vi.resetModules();
-  delete (globalThis as typeof globalThis & { __orbitalCatalogCache?: unknown }).__orbitalCatalogCache;
+  delete (globalThis as typeof globalThis & { __orbitalCatalogCache?: unknown })
+    .__orbitalCatalogCache;
   return import("@/lib/catalog");
 }
 
@@ -37,7 +52,9 @@ describe("TLE validation and parsing", () => {
 
   it("accepts unnamed 2LE records and the optional 0 name prefix", async () => {
     const { parseTle } = await isolatedCatalog();
-    expect(parseTle(ISS.split("\n").slice(1).join("\n"))[0].name).toBe("NORAD 25544");
+    expect(parseTle(ISS.split("\n").slice(1).join("\n"))[0].name).toBe(
+      "NORAD 25544",
+    );
     expect(parseTle(`0 ${ISS}`)[0].name).toBe("ISS (ZARYA)");
   });
 
@@ -63,16 +80,25 @@ describe("TLE validation and parsing", () => {
     [2, 52, " 0.00000000"],
     [2, 52, "21.00000000"],
     [1, 20, "367.00000000"],
-  ])("rejects out-of-range or malformed orbital fields (%i:%i)", async (line, start, value) => {
-    const { parseTle } = await isolatedCatalog();
-    expect(parseTle(replaceField(ISS, line, start, value))).toEqual([]);
-  });
+  ])(
+    "rejects out-of-range or malformed orbital fields (%i:%i)",
+    async (line, start, value) => {
+      const { parseTle } = await isolatedCatalog();
+      expect(parseTle(replaceField(ISS, line, start, value))).toEqual([]);
+    },
+  );
 
   it("applies the standard 1957/2056 epoch rollover and leap days", async () => {
     const { parseTle } = await isolatedCatalog();
-    expect(parseTle(replaceField(ISS, 1, 18, "57001.00000000"))[0].epoch).toBe("1957-01-01T00:00:00.000Z");
-    expect(parseTle(replaceField(ISS, 1, 18, "56001.00000000"))[0].epoch).toBe("2056-01-01T00:00:00.000Z");
-    expect(parseTle(replaceField(ISS, 1, 18, "24366.50000000"))[0].epoch).toBe("2024-12-31T12:00:00.000Z");
+    expect(parseTle(replaceField(ISS, 1, 18, "57001.00000000"))[0].epoch).toBe(
+      "1957-01-01T00:00:00.000Z",
+    );
+    expect(parseTle(replaceField(ISS, 1, 18, "56001.00000000"))[0].epoch).toBe(
+      "2056-01-01T00:00:00.000Z",
+    );
+    expect(parseTle(replaceField(ISS, 1, 18, "24366.50000000"))[0].epoch).toBe(
+      "2024-12-31T12:00:00.000Z",
+    );
     expect(parseTle(replaceField(ISS, 1, 18, "25366.50000000"))).toEqual([]);
   });
 
@@ -89,7 +115,9 @@ describe("TLE validation and parsing", () => {
     for (const snapshot of Object.values(snapshots.groups)) {
       const records = parseTle(snapshot);
       expect(records.length).toBe(snapshot.trim().split(/\r?\n/).length / 3);
-      expect(records.every((record) => Number.isFinite(Date.parse(record.epoch)))).toBe(true);
+      expect(
+        records.every((record) => Number.isFinite(Date.parse(record.epoch))),
+      ).toBe(true);
     }
   });
 });
@@ -106,30 +134,77 @@ describe("CelesTrak catalog loading", () => {
   });
 
   it("fetches the requested dataset and reuses it for two hours", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(snapshots.groups.visual));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(snapshots.groups.visual));
     vi.stubGlobal("fetch", fetchMock);
     const { getCatalog } = await isolatedCatalog();
     const result = await getCatalog("featured");
     expect(result.source).toBe("celestrak");
     expect(result.satellites).toHaveLength(20);
     expect(result.satellites[0].noradId).toBe(25544);
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("GROUP=visual&FORMAT=TLE"), expect.objectContaining({ next: { revalidate: 7_200 } }));
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("GROUP=visual&FORMAT=TLE"),
+      expect.objectContaining({ next: { revalidate: 7_200 } }),
+    );
     vi.setSystemTime(Date.now() + TWO_HOURS_MS - 1);
     expect((await getCatalog("featured")).source).toBe("cache");
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("deduplicates simultaneous requests to the same upstream dataset", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(snapshots.groups.stations));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(snapshots.groups.stations));
     vi.stubGlobal("fetch", fetchMock);
     const { getCatalog } = await isolatedCatalog();
-    const [first, second] = await Promise.all([getCatalog("stations"), getCatalog("stations")]);
+    const [first, second] = await Promise.all([
+      getCatalog("stations"),
+      getCatalog("stations"),
+    ]);
     expect(first).toEqual(second);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("preserves the origin response date when Next returns a retained response", async () => {
+    const originDate = "Tue, 20 Oct 2026 13:00:00 GMT";
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(snapshots.groups.stations, {
+            headers: { Date: originDate },
+          }),
+        ),
+    );
+    const { getCatalog } = await isolatedCatalog();
+    const result = await getCatalog("stations");
+    expect(result.source).toBe("cache");
+    expect(result.fetchedAt).toBe("2026-10-20T13:00:00.000Z");
+    expect(result.notice).toBeUndefined();
+  });
+
+  it("uses an explicit cache Age header when an origin Date is absent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(snapshots.groups.stations, { headers: { Age: "3600" } }),
+        ),
+    );
+    const { getCatalog } = await isolatedCatalog();
+    const result = await getCatalog("stations");
+    expect(result.source).toBe("cache");
+    expect(result.fetchedAt).toBe("2026-10-20T14:00:00.000Z");
+  });
+
   it("refreshes after two hours and preserves the last good catalog on network failure", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(snapshots.groups.stations)).mockRejectedValueOnce(new TypeError("Network unavailable"));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(snapshots.groups.stations))
+      .mockRejectedValueOnce(new TypeError("Network unavailable"));
     vi.stubGlobal("fetch", fetchMock);
     const { getCatalog } = await isolatedCatalog();
     const first = await getCatalog("stations");
@@ -144,10 +219,17 @@ describe("CelesTrak catalog loading", () => {
   });
 
   it("backs off all queries after an HTTP error and supplies labeled genuine demo catalogs", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("Forbidden", { status: 403 }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response("Forbidden", { status: 403 }));
     vi.stubGlobal("fetch", fetchMock);
     const { getCatalog } = await isolatedCatalog();
-    for (const group of ["featured", "stations", "weather", "science"] as const) {
+    for (const group of [
+      "featured",
+      "stations",
+      "weather",
+      "science",
+    ] as const) {
       const result = await getCatalog(group);
       expect(result.source).toBe("demo");
       expect(result.satellites.length).toBeGreaterThan(0);
@@ -157,7 +239,12 @@ describe("CelesTrak catalog loading", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it.each(["<html><body>Rate limited</body></html>", "No GP data found", "", ISS.slice(0, -1)])("falls back safely for an unusable response", async (body) => {
+  it.each([
+    "<html><body>Rate limited</body></html>",
+    "No GP data found",
+    "",
+    ISS.slice(0, -1),
+  ])("falls back safely for an unusable response", async (body) => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(body));
     vi.stubGlobal("fetch", fetchMock);
     const { getCatalog } = await isolatedCatalog();
@@ -169,9 +256,17 @@ describe("CelesTrak catalog loading", () => {
   });
 
   it("aborts a stalled upstream after ten seconds", async () => {
-    vi.stubGlobal("fetch", vi.fn((_url: string, options: RequestInit) => new Promise((_resolve, reject) => {
-      options.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
-    })));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, options: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            options.signal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            );
+          }),
+      ),
+    );
     const { getCatalog } = await isolatedCatalog();
     const pending = getCatalog("stations");
     await vi.advanceTimersByTimeAsync(10_000);
@@ -199,14 +294,19 @@ describe("Catalog HTTP route", () => {
     await isolatedCatalog();
     const { GET } = await import("@/app/api/catalog/route");
     const { NextRequest } = await import("next/server");
-    const response = await GET(new NextRequest("http://localhost/api/catalog?group=unknown"));
+    const response = await GET(
+      new NextRequest("http://localhost/api/catalog?group=unknown"),
+    );
     expect(response.status).toBe(400);
     expect((await response.json()).error).toContain("Invalid catalog group");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("defaults to featured and returns a JSON catalog with caching controlled on the server", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(snapshots.groups.visual)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(snapshots.groups.visual)),
+    );
     await isolatedCatalog();
     const { GET } = await import("@/app/api/catalog/route");
     const { NextRequest } = await import("next/server");

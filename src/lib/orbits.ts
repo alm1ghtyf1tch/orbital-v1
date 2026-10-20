@@ -159,7 +159,7 @@ export function getSatelliteLookAngles(
   }
   return {
     elevation: look.elevation * DEGREES_PER_RADIAN,
-    azimuth: ((look.azimuth * DEGREES_PER_RADIAN) % 360 + 360) % 360,
+    azimuth: (((look.azimuth * DEGREES_PER_RADIAN) % 360) + 360) % 360,
     rangeKm: look.rangeSat,
   };
 }
