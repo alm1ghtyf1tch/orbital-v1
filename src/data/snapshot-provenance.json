@@ -1,0 +1,30 @@
+[
+  {
+    "group": "visual",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=TLE",
+    "retrievedAt": "2026-10-20T16:43:02.197861+00:00",
+    "status": 200,
+    "bytes": 26040
+  },
+  {
+    "group": "stations",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=TLE",
+    "retrievedAt": "2026-10-20T16:43:03.878198+00:00",
+    "status": 200,
+    "bytes": 2856
+  },
+  {
+    "group": "weather",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=TLE",
+    "retrievedAt": "2026-10-20T16:43:05.812438+00:00",
+    "status": 200,
+    "bytes": 12096
+  },
+  {
+    "group": "science",
+    "url": "https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=TLE",
+    "retrievedAt": "2026-10-20T16:43:06.801506+00:00",
+    "status": 200,
+    "bytes": 7728
+  }
+]
