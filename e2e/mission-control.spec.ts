@@ -121,7 +121,7 @@ test("tracks real elements, changes selection, controls time and exports passes"
   expect(csv).toContain("Not an optical visibility forecast");
   await page.waitForTimeout(800);
   await page.screenshot({
-    path: `artifacts/orbital-${testInfo.project.name}.png`,
+    path: `artifacts/hand-controls/regression-${testInfo.project.name}.png`,
     fullPage: true,
   });
   expect(errors).toEqual([]);

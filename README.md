@@ -31,6 +31,26 @@ npm start
 
 All displayed pass times are **UTC**. A pass starts and ends at the selected minimum elevation, which is 10° by default. **IN VIEW** can mean that the event started before the forecast window; its displayed start is then the window boundary. **PARTIAL** means the event continues beyond the window; the displayed end is a forecast boundary, not a predicted loss of access. Peak elevation and duration for clipped events describe only the included interval. CSV exports preserve both flags.
 
+## Optional hand controls
+
+The approved original version is preserved at Git tag **`orbital-v1.0.0`** (commit `2b53f3d`) and the original `feat/orbital-mission-control` branch. The optional feature is developed separately on `feat/optional-hand-controls`.
+
+Click the **hand icon** in the globe toolbar to open its panel. Opening the panel keeps the camera off. Click **Enable camera & gestures** to request camera permission and start recognition.
+
+| Gesture                                           | Action                                           |
+| ------------------------------------------------- | ------------------------------------------------ |
+| Open palm, then move your hand                    | Orbit the globe, following the mirrored preview. |
+| Pinch thumb and index finger, then move up / down | Zoom in / out.                                   |
+| Close or relax your hand, or move it out of view  | Hold the camera position.                        |
+
+Use one clearly visible hand, with your palm facing the camera and good lighting. Hold each new gesture briefly before moving. The preview shows the detected hand skeleton and current action. You can minimize the panel while using it.
+
+Hand controls are **off by default** and never enable themselves on reload. Mouse, touch, and toolbar controls remain available and take priority during direct interaction. **Turn camera off**, closing the panel, hiding the tab, or navigating away stops the camera and worker. An unanswered browser camera prompt may remain visible after Cancel; if permission is later granted to that canceled session, its tracks are immediately released.
+
+Video frames are processed locally in a dedicated CPU worker; no microphone, recording or image upload is used. The pinned MediaPipe runtime/model assets are served locally only after enabling the feature (approximately **20.7 MiB** on first use, then normal browser caching). The worker restricts its network fetches to local, read-only hand-tracking assets, including blocking the library's provider utilization logging. See [asset provenance and licenses](public/hand-tracking/ATTRIBUTION.md).
+
+This requires HTTPS or localhost, a camera, and modern browser support for Worker, OffscreenCanvas, createImageBitmap and WebAssembly SIMD. Permission denial, a busy/missing camera, unsupported browsers and model failures produce an error inside the optional panel; the standard dashboard remains usable. Physical webcam/lighting quality affects recognition. See [HAND_CONTROLS_REPORT.md](HAND_CONTROLS_REPORT.md) for verification and limitations.
+
 ## Data and accuracy
 
 Every satellite position and pass is an **approximate orbital prediction, never measured live telemetry**. A catalog entry does not establish that a spacecraft remains operational. An overhead pass is not an optical-visibility forecast: sunlight, Earth shadow, atmospheric refraction, terrain and weather are not evaluated. Earth lighting and atmospheric effects are illustrative.
@@ -62,7 +82,7 @@ Bundled snapshots were downloaded on **2026-10-20 UTC** and remain frozen. Exact
 | `src/data`, `public/textures`   | Bundled orbital snapshots and local NASA Blue Marble texture, with provenance and attribution.                                                        |
 | `src/**/*.test.ts`, `e2e`       | Vitest numerical/application tests and Playwright desktop/mobile browser scenarios.                                                                   |
 
-The stack is Next.js 16, React 19, TypeScript, Tailwind CSS 4, Three.js with React Three Fiber/Drei, satellite.js 6 and Vitest 5. Exact installed versions are locked in `package-lock.json`.
+The stack is Next.js 16, React 19, TypeScript, Tailwind CSS 4, Three.js with React Three Fiber/Drei, satellite.js 6 and Vitest 5, with MediaPipe 1.1.1 for optional hand controls. Exact installed versions are locked in `package-lock.json`.
 
 Positions and forecasts are computed locally in the browser as simulation time advances. Only orbital-catalog retrieval uses the server. There is no database, authentication or saved mission state: observer settings and selections reset on reload. Cache state is local to each running installation, with no shared backing across instances; a multi-instance installation would need shared caching/rate coordination to maintain an aggregate upstream request limit.
 
@@ -82,7 +102,7 @@ Optional browser checks run against a production build:
 npm run build && npm run test:e2e
 ```
 
-Playwright automatically uses `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` when available on macOS. Otherwise install its Chromium browser with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible executable. The configuration starts the local production server on port 3000 and can reuse an existing server outside CI. Browser scenarios use frozen genuine elements and a fixed clock, avoiding additional CelesTrak downloads. The main browser scenario saves desktop/mobile captures under `artifacts/`; Playwright retains failure traces/screenshots under `test-results/`.
+Playwright automatically uses `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome` when available on macOS. Otherwise install its Chromium browser with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible executable. The configuration starts the local production server on port 3000 and can reuse an existing server outside CI. To keep a running development server separate, use `PLAYWRIGHT_PORT=3010 npm run test:e2e`. Browser scenarios use frozen genuine elements and a fixed clock, avoiding additional CelesTrak downloads. The current browser scenario saves desktop/mobile captures under `artifacts/hand-controls/`, preserving the approved baseline screenshots; Playwright retains failure traces/screenshots under `test-results/`.
 
 ## Credits
 

@@ -36,11 +36,13 @@ import type {
   SatellitePosition,
   SatelliteRecord,
 } from "@/lib/types";
+import type { HandCameraInput } from "@/lib/hand-types";
 import {
   createCameraFocusStep,
   getCameraLimits,
   updateCameraClipping,
 } from "./globe-camera";
+import { clearHandCameraMotion, createHandCameraStep } from "./hand-camera";
 
 const EARTH_RADIUS = 2;
 const EARTH_KM = 6378.137;
@@ -70,6 +72,7 @@ export interface EarthGlobeProps {
   autoRotate: boolean;
   focusKey: number;
   zoomCommand: { direction: "in" | "out"; nonce: number } | null;
+  handInput?: RefObject<HandCameraInput>;
   onSelect: (id: string) => void;
   time: Date;
 }
@@ -485,14 +488,24 @@ function CameraController({
   autoRotate,
   sceneRadius,
   reducedMotion,
+  handInput,
 }: Pick<
   EarthGlobeProps,
-  "selectedId" | "selectedPosition" | "focusKey" | "zoomCommand" | "autoRotate"
+  | "selectedId"
+  | "selectedPosition"
+  | "focusKey"
+  | "zoomCommand"
+  | "autoRotate"
+  | "handInput"
 > & { sceneRadius: number; reducedMotion: boolean }) {
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const { camera } = useThree();
   const limits = useMemo(() => getCameraLimits(sceneRadius), [sceneRadius]);
   const moveFocus = useMemo(() => createCameraFocusStep(), []);
+  const moveHand = useMemo(() => createHandCameraStep(), []);
+  const origin = useMemo(() => new Vector3(), []);
+  const pointerActive = useRef(false);
+  const pointerCooldown = useRef(0);
   const focusPosition = useRef<SatellitePosition | null>(selectedPosition);
   const destination = useRef<Vector3 | null>(null);
   const desiredDistance = useRef<number | null>(null);
@@ -507,14 +520,16 @@ function CameraController({
   }, [selectedPosition]);
   useEffect(() => {
     if (focusKey === 0 || !focusPosition.current) return;
+    clearHandCameraMotion(handInput?.current);
     const point = new Vector3(...ecfToWorld(focusPosition.current.positionEcf));
     const distance = Math.max(7.6, point.length() * 2.65);
     destination.current = point.normalize().multiplyScalar(distance);
     desiredDistance.current = null;
-  }, [focusKey, selectedId]);
+  }, [focusKey, selectedId, handInput]);
   useEffect(() => {
     if (!zoomCommand || handledZoomCommand.current === zoomCommand) return;
     handledZoomCommand.current = zoomCommand;
+    clearHandCameraMotion(handInput?.current);
     destination.current = null;
     desiredDistance.current = Math.max(
       3.3,
@@ -524,13 +539,27 @@ function CameraController({
           (zoomCommand.direction === "in" ? 0.8 : 1.25),
       ),
     );
-  }, [zoomCommand, camera, limits.maxDistance]);
+  }, [zoomCommand, camera, limits.maxDistance, handInput]);
 
   useFrame((_, delta) => {
+    const hand = handInput?.current;
+    const now = performance.now();
+    const target = controls.current?.target ?? origin;
+    // Mouse/touch always have priority, including the short damping tail.
+    if (pointerActive.current || now < pointerCooldown.current) {
+      clearHandCameraMotion(hand);
+    } else if (
+      moveHand(camera.position, target, hand, limits.maxDistance, now)
+    ) {
+      destination.current = null;
+      desiredDistance.current = null;
+      camera.lookAt(target);
+    }
     if (controls.current) {
       // Let a focus or zoom settle before resuming the user's rotation setting.
       controls.current.autoRotate =
         autoRotate &&
+        !hand?.active &&
         destination.current === null &&
         desiredDistance.current === null;
     }
@@ -563,8 +592,15 @@ function CameraController({
       autoRotate={false}
       autoRotateSpeed={0.3}
       onStart={() => {
+        pointerActive.current = true;
+        clearHandCameraMotion(handInput?.current);
         destination.current = null;
         desiredDistance.current = null;
+      }}
+      onEnd={() => {
+        pointerActive.current = false;
+        pointerCooldown.current = performance.now() + 500;
+        clearHandCameraMotion(handInput?.current);
       }}
     />
   );

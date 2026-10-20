@@ -15,6 +15,7 @@ import {
   Database,
   ExternalLink,
   Globe2,
+  Hand,
   Info,
   Layers3,
   MapPin,
@@ -52,6 +53,7 @@ import {
   utcTime,
 } from "@/lib/format";
 import type { CatalogGroup, Observer, SatellitePosition } from "@/lib/types";
+import type { HandCameraInput, HandMotion } from "@/lib/hand-types";
 import { GlobeBoundary } from "./globe-boundary";
 import { DEFAULT_OBSERVER, CATALOG_GROUPS as GROUPS } from "@/lib/constants";
 import { ObserverForm } from "./observer-form";
@@ -69,6 +71,8 @@ const EarthGlobe = dynamic(() => import("./earth-globe"), {
     </div>
   ),
 });
+
+const HandControls = dynamic(() => import("./hand-controls"), { ssr: false });
 
 export default function MissionControl() {
   const { group, setGroup, catalog, loading, error, refresh } = useCatalog();
@@ -92,6 +96,40 @@ export default function MissionControl() {
   } | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [handControlsOpen, setHandControlsOpen] = useState(false);
+  const handInput = useRef<HandCameraInput>({
+    active: false,
+    updatedAt: 0,
+    rotateX: 0,
+    rotateY: 0,
+    zoom: 0,
+  });
+  const publishHandMotion = useCallback((motion: HandMotion) => {
+    const mailbox = handInput.current;
+    mailbox.rotateX = Math.max(
+      -0.12,
+      Math.min(0.12, mailbox.rotateX + motion.rotateX),
+    );
+    mailbox.rotateY = Math.max(
+      -0.12,
+      Math.min(0.12, mailbox.rotateY + motion.rotateY),
+    );
+    mailbox.zoom = Math.max(-0.12, Math.min(0.12, mailbox.zoom + motion.zoom));
+    mailbox.updatedAt = performance.now();
+    if (motion.rotateX === 0 && motion.rotateY === 0 && motion.zoom === 0) {
+      mailbox.rotateX = 0;
+      mailbox.rotateY = 0;
+      mailbox.zoom = 0;
+    }
+  }, []);
+  const setHandActive = useCallback((active: boolean) => {
+    const mailbox = handInput.current;
+    mailbox.active = active;
+    mailbox.updatedAt = active ? performance.now() : 0;
+    mailbox.rotateX = 0;
+    mailbox.rotateY = 0;
+    mailbox.zoom = 0;
+  }, []);
   const [exportNote, setExportNote] = useState("");
   const passSection = useRef<HTMLElement>(null);
 
@@ -508,6 +546,7 @@ export default function MissionControl() {
                   autoRotate={autoRotate}
                   focusKey={focusKey}
                   zoomCommand={zoomCommand}
+                  handInput={handInput}
                   onSelect={setSelectedId}
                   time={time}
                 />
@@ -569,7 +608,27 @@ export default function MissionControl() {
               >
                 <Maximize2 size={15} />
               </button>
+              <button
+                className={`icon-button hand-tool-button ${handControlsOpen ? "is-active" : ""}`}
+                aria-label="Hand controls (optional)"
+                title="Hand controls (optional)"
+                aria-expanded={handControlsOpen}
+                aria-controls="hand-controls-panel"
+                onClick={() => {
+                  setHandControlsOpen(!handControlsOpen);
+                  setLayersOpen(false);
+                }}
+              >
+                <Hand size={17} />
+              </button>
             </div>
+            {handControlsOpen && (
+              <HandControls
+                onMotion={publishHandMotion}
+                onActive={setHandActive}
+                onClose={() => setHandControlsOpen(false)}
+              />
+            )}
             {layersOpen && (
               <div className="layers-popover">
                 <div className="micro-label">

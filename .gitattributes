@@ -1,0 +1,4 @@
+# Preserve the upstream runtime bytes and published checksums exactly.
+public/hand-tracking/wasm/*.js -text -whitespace
+public/hand-tracking/wasm/*.wasm binary
+public/hand-tracking/*.task binary

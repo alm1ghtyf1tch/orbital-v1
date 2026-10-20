@@ -7,6 +7,12 @@ const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
   (existsSync(systemChrome) ? systemChrome : undefined);
 
+const testPort = Number(process.env.PLAYWRIGHT_PORT ?? "3000");
+if (!Number.isInteger(testPort) || testPort < 1 || testPort > 65535) {
+  throw new Error("PLAYWRIGHT_PORT must be an integer between 1 and 65535.");
+}
+const localTestUrl = `http://127.0.0.1:${testPort}`;
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 45_000,
@@ -15,13 +21,13 @@ export default defineConfig({
   workers: 1,
   reporter: "list",
   webServer: {
-    command: "npm run start -- --hostname 127.0.0.1 --port 3000",
-    url: "http://127.0.0.1:3000",
+    command: `npm run start -- --hostname 127.0.0.1 --port ${testPort}`,
+    url: localTestUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? localTestUrl,
     launchOptions: { executablePath, args: ["--enable-unsafe-swiftshader"] },
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

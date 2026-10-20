@@ -3238,3 +3238,283 @@ main {
     scroll-behavior: auto !important;
   }
 }
+
+/* Optional camera controls are contained here; the standard globe stays usable. */
+.hand-panel {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  left: 17px;
+  top: 63px;
+  z-index: 10;
+  width: 268px;
+  max-width: calc(100% - 72px);
+  max-height: calc(100% - 154px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #365167 transparent;
+  padding: 13px;
+  background: #0f1926f5;
+  border: 1px solid #345266;
+  border-radius: 7px;
+  box-shadow: 0 12px 36px #0007;
+  backdrop-filter: blur(16px);
+}
+.hand-panel-heading {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  margin-bottom: 11px;
+}
+.hand-panel-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #365167 transparent;
+}
+.hand-preview:not(.is-streaming) {
+  aspect-ratio: auto;
+  height: 76px;
+}
+.hand-panel-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c1dbe6;
+  font-size: 10px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.hand-panel-heading h3 > svg {
+  color: #87cfe0;
+}
+.hand-panel-heading h3 > span {
+  border: 1px solid #375065;
+  border-radius: 3px;
+  padding: 2px 3px;
+  color: #7a99ae;
+  font-family: var(--mono);
+  font-size: 5px;
+  letter-spacing: 0.5px;
+}
+.hand-panel-heading > div {
+  display: flex;
+  gap: 2px;
+}
+.hand-panel-heading .icon-button {
+  width: 20px;
+  height: 22px;
+}
+.hand-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  border: 1px solid #2b4053;
+  border-radius: 4px;
+  background: #080e16;
+}
+.hand-preview > video,
+.hand-preview > canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transform: scaleX(-1);
+}
+.hand-preview > canvas {
+  pointer-events: none;
+}
+.hand-preview:not(.is-streaming) > video,
+.hand-preview:not(.is-streaming) > canvas {
+  visibility: hidden;
+}
+.hand-preview-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  background: radial-gradient(ellipse at center, #182a3b, #0b131f);
+  color: #7091aa;
+}
+.hand-preview-placeholder > span {
+  font-size: 9px;
+  color: #9db4c9;
+}
+.hand-preview-placeholder > small {
+  font-size: 7px;
+  color: #6e8b9f;
+}
+.hand-camera-badge {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 5px;
+  border: 1px solid #365754;
+  border-radius: 3px;
+  background: #0c1d20c9;
+  color: #a8d9c5;
+  font-family: var(--mono);
+  font-size: 5px;
+  letter-spacing: 0.6px;
+}
+.hand-live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 8px;
+  line-height: 1.6;
+  color: #8ca8bd;
+}
+.hand-live-status .status-dot {
+  width: 4px;
+  height: 4px;
+}
+.hand-panel-active .hand-live-status {
+  color: #add7e3;
+}
+.hand-gesture-guide {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #273b4d;
+  padding: 13px 0 12px;
+}
+.hand-gesture-guide > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #779eb6;
+}
+.hand-gesture-guide > div > svg {
+  width: 23px;
+  flex-shrink: 0;
+}
+.hand-gesture-guide > div > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #6f8ca3;
+  font-size: 7px;
+  line-height: 1.4;
+}
+.hand-gesture-guide strong {
+  font-size: 9px;
+  font-weight: 400;
+  color: #bdcedb;
+}
+.hand-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid #273b4d;
+  color: #7f9caf;
+  font-size: 7px;
+  line-height: 1.8;
+}
+.hand-privacy > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #7cabb9;
+}
+.hand-message {
+  padding: 9px;
+  margin: 0 0 10px;
+  border: 1px solid #34475b;
+  border-radius: 4px;
+  background: #14212f;
+  color: #9fb7c9;
+  font-size: 9px;
+  line-height: 1.7;
+}
+.hand-error {
+  border-color: #6a4436;
+  background: #2e221e;
+  color: #dcbaa2;
+}
+.hand-panel-actions {
+  flex-shrink: 0;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hand-panel-actions > button {
+  width: 100%;
+  font-size: 9px;
+  padding: 9px 7px;
+  white-space: normal;
+}
+.hand-panel-actions > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #72a994;
+  font-size: 6px;
+}
+.hand-panel-mini {
+  width: 208px;
+}
+.hand-panel-mini .hand-preview {
+  aspect-ratio: 16/9;
+}
+.hand-panel-mini .hand-panel-heading h3 > span {
+  display: none;
+}
+.hand-panel-mini .hand-live-status {
+  font-size: 7px;
+}
+.hand-tool-button > svg {
+  color: #8eacbe;
+}
+.hand-tool-button.is-active > svg {
+  color: var(--cyan);
+}
+@media (max-width: 760px) {
+  .hand-panel {
+    left: 12px;
+    top: 59px;
+    width: 255px;
+    max-height: calc(100% - 149px);
+    max-width: calc(100% - 62px);
+  }
+}
+@media (max-width: 560px) {
+  .hand-panel {
+    left: 13px;
+    top: 61px;
+    width: 260px;
+    max-height: calc(100% - 150px);
+  }
+  .hand-panel-heading h3 {
+    font-size: 11px;
+  }
+  .hand-panel-heading .icon-button {
+    width: 24px;
+    height: 24px;
+  }
+  .hand-panel-heading h3 > span {
+    font-size: 6px;
+  }
+  .hand-panel-actions > button {
+    font-size: 10px;
+    min-height: 35px;
+  }
+  .hand-panel-mini {
+    width: 220px;
+  }
+}

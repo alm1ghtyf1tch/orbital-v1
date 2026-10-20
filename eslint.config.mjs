@@ -11,5 +11,8 @@ export default defineConfig([
     "coverage/**",
     "next-env.d.ts",
     "artifacts/**",
+    "test-results/**",
+    "playwright-report/**",
+    "public/hand-tracking/wasm/**",
   ]),
 ]);
